@@ -19,8 +19,6 @@ if ($qs !== '') {
 
 <div class="px-3 py-3">
 
-    <h3>DA DNSSEC Sync Manager</h3>
-
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
             <a class="nav-link active" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager">Domain Exceptions</a>
@@ -41,18 +39,13 @@ if ($qs !== '') {
     <div class="card mb-4">
         <div class="card-header">Add domain to exclusion list</div>
         <div class="card-body">
-            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/save.html" class="row g-2">
-                <div class="col-auto">
-                    <input type="text"
-                           name="domain"
-                           class="form-control"
-                           placeholder="example.com"
-                           required
-                           style="min-width:260px;">
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Add Domain</button>
-                </div>
+            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/save.html" class="d-flex gap-2">
+                <input type="text"
+                       name="domain"
+                       class="form-control"
+                       placeholder="example.com"
+                       required>
+                <button type="submit" class="btn btn-primary text-nowrap">Add Domain</button>
             </form>
         </div>
     </div>

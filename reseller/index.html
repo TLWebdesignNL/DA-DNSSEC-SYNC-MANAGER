@@ -19,7 +19,6 @@ if ($qs !== '') {
 
 <div class="px-3 py-3">
 
-    <h3>DA DNSSEC Sync Manager</h3>
     <p class="text-muted">Domains in this list are skipped by the ODR DNSSEC sync script.</p>
 
     <?php if ($flash !== ''): ?>
@@ -31,18 +30,13 @@ if ($qs !== '') {
     <div class="card mb-4">
         <div class="card-header">Add domain to exclusion list</div>
         <div class="card-body">
-            <form method="post" action="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager/save.html" class="row g-2">
-                <div class="col-auto">
-                    <input type="text"
-                           name="domain"
-                           class="form-control"
-                           placeholder="example.com"
-                           required
-                           style="min-width:260px;">
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Add Domain</button>
-                </div>
+            <form method="post" action="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager/save.html" class="d-flex gap-2">
+                <input type="text"
+                       name="domain"
+                       class="form-control"
+                       placeholder="example.com"
+                       required>
+                <button type="submit" class="btn btn-primary text-nowrap">Add Domain</button>
             </form>
         </div>
     </div>

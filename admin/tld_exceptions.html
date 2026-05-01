@@ -18,8 +18,6 @@ if ($qs !== '') {
 
 <div class="px-3 py-3">
 
-    <h3>DA DNSSEC Sync Manager</h3>
-
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
             <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager">Domain Exceptions</a>
@@ -43,18 +41,13 @@ if ($qs !== '') {
     <div class="card mb-4">
         <div class="card-header">Add TLD exception</div>
         <div class="card-body">
-            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_save.html" class="row g-2">
-                <div class="col-auto">
-                    <input type="text"
-                           name="tld"
-                           class="form-control"
-                           placeholder="com"
-                           required
-                           style="min-width:200px;">
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Add TLD</button>
-                </div>
+            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_save.html" class="d-flex gap-2">
+                <input type="text"
+                       name="tld"
+                       class="form-control"
+                       placeholder="com"
+                       required>
+                <button type="submit" class="btn btn-primary text-nowrap">Add TLD</button>
             </form>
             <div class="form-text mt-2">Enter without a leading dot — e.g. <code>com</code>, <code>care</code>, <code>co.uk</code></div>
         </div>
