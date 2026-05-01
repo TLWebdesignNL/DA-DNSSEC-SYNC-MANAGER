@@ -24,6 +24,13 @@ document.addEventListener('DOMContentLoaded', function () {
     updateLinkTheme(theme);
 
     try {
+        if (window.top && window.top !== window && window.top.document) {
+            var ic = window.top.document.getElementById('iframe-container');
+            if (ic) { ic.classList.add('w-100'); }
+        }
+    } catch (e) {}
+
+    try {
         if (window.top && window.top !== window && window.top.document && window.top.document.body) {
             new MutationObserver(function () {
                 var t = resolveTheme();
