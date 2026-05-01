@@ -38,6 +38,11 @@ if [ ! -f "$PLUGIN_PATH/data/excluded.txt" ]; then
     chmod 644 "$PLUGIN_PATH/data/excluded.txt"
 fi
 
+# Ensure the sync log file exists and is writable by diradmin
+touch /var/log/da-odr-dnssec-sync.log
+chown diradmin:diradmin /var/log/da-odr-dnssec-sync.log
+chmod 640 /var/log/da-odr-dnssec-sync.log
+
 # Create sync status directory (written by the sync script after each run)
 mkdir -p "$PLUGIN_PATH/data/sync"
 chown diradmin:diradmin "$PLUGIN_PATH/data/sync"

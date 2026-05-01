@@ -250,9 +250,9 @@ then
   echo "DA ZSK Algortihm: $DIRECTADMIN_ZSK_ALGORITHM"
   echo "DA ZSK Key: $DIRECTADMIN_ZSK_PUBKEY"
 else
-  echo "DA ZSK FILE DOES NOT EXIST. THIS DOMAIN DOES NOT HAVE DNSSEC ENABLED"
-  send_notification "$ADMINUSERNAME" "$DOMAIN DOES NOT HAVE DNSSEC ENABLED" "ZSK FILE NOT FOUND. $DOMAIN DOES NOT HAVE DNSSEC ENABLED"
-  write_status "$DOMAIN" "error" "" "" "DNSSEC not enabled: ZSK key file not found"
+  echo "DA ZSK FILE DOES NOT EXIST: $ZSK_KEY_FILE"
+  send_notification "$ADMINUSERNAME" "$DOMAIN DOES NOT HAVE DNSSEC ENABLED" "ZSK FILE NOT FOUND: $ZSK_KEY_FILE"
+  write_status "$DOMAIN" "error" "" "" "DNSSEC not enabled: ZSK key file not found ($ZSK_KEY_FILE)"
   exit 0;
 fi
 
@@ -274,9 +274,9 @@ then
   echo "KSK Algorithm: $DIRECTADMIN_KSK_ALGORITHM"
   echo "KSK Key: $DIRECTADMIN_KSK_PUBKEY"
 else
-  echo "DA KSK FILE DOES NOT EXIST. THIS DOMAIN DOES NOT HAVE DNSSEC ENABLED"
-  send_notification "$ADMINUSERNAME" "$DOMAIN DOES NOT HAVE DNSSEC ENABLED" "KSK FILE NOT FOUND. $DOMAIN DOES NOT HAVE DNSSEC ENABLED"
-  write_status "$DOMAIN" "error" "" "" "DNSSEC not enabled: KSK key file not found"
+  echo "DA KSK FILE DOES NOT EXIST: $KSK_KEY_FILE"
+  send_notification "$ADMINUSERNAME" "$DOMAIN DOES NOT HAVE DNSSEC ENABLED" "KSK FILE NOT FOUND: $KSK_KEY_FILE"
+  write_status "$DOMAIN" "error" "" "" "DNSSEC not enabled: KSK key file not found ($KSK_KEY_FILE)"
   exit 0;
 fi
 
