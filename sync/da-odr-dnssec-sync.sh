@@ -29,8 +29,13 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "//////////////////////////$(date)//////////////////////////"
 echo "START OF THE SCRIPT TO UPDATE ODR DETAILS"
 echo "///////////////////////////////////////////////"
-# load the reseller credentials from external file
-source /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh
+# load the reseller credentials from external file if it exists (legacy; plugin UI credentials take priority)
+if [ -f /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh ]; then
+    source /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh
+fi
+
+# Fallback: if config file is absent or did not define ADMINUSERNAME, default to "admin"
+ADMINUSERNAME="${ADMINUSERNAME:-admin}"
 
 #------------------------------------------------
 # BEGIN FUNCTIONS USED IN SCRIPT
