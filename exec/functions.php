@@ -152,3 +152,55 @@ function flashRedirectUrl($baseUrl, $result) {
     $flash = urlencode($result['message']);
     return $baseUrl . '?ok=' . $ok . '&flash=' . $flash;
 }
+
+// Returns ['success' => bool, 'message' => string]
+function saveCredentials($publicKey, $privateKey, $username, $credsDir) {
+    $publicKey  = trim($publicKey);
+    $privateKey = trim($privateKey);
+
+    if (empty($publicKey) || empty($privateKey)) {
+        return ['success' => false, 'message' => 'Error: Both public and private key are required.'];
+    }
+
+    if (!preg_match('/^[A-Za-z0-9\$\._\-]+$/', $publicKey) || !preg_match('/^[A-Za-z0-9\$\._\-]+$/', $privateKey)) {
+        return ['success' => false, 'message' => 'Error: Keys may only contain letters, digits, $, ., _ and -.'];
+    }
+
+    if (!is_dir($credsDir)) {
+        mkdir($credsDir, 0700, true);
+        chown($credsDir, 'diradmin');
+    }
+
+    $file    = $credsDir . '/' . $username . '.conf';
+    $escaped = function($v) { return str_replace("'", "'\\''", $v); };
+    $content = "ODR_PUBLIC_KEY='" . $escaped($publicKey) . "'\n"
+             . "ODR_PRIVATE_KEY='" . $escaped($privateKey) . "'\n";
+
+    if (file_put_contents($file, $content, LOCK_EX) === false) {
+        return ['success' => false, 'message' => 'Error: Could not write credentials file.'];
+    }
+
+    chmod($file, 0600);
+    chown($file, 'diradmin');
+    return ['success' => true, 'message' => 'Credentials saved successfully.'];
+}
+
+// Returns ['success' => bool, 'message' => string]
+function deleteCredentials($username, $credsDir) {
+    $file = $credsDir . '/' . $username . '.conf';
+
+    if (!file_exists($file)) {
+        return ['success' => false, 'message' => 'Error: No credentials file found.'];
+    }
+
+    if (!unlink($file)) {
+        return ['success' => false, 'message' => 'Error: Could not delete credentials file.'];
+    }
+
+    return ['success' => true, 'message' => 'Credentials removed.'];
+}
+
+// Returns true if a credentials file exists for the given username
+function credentialsExist($username, $credsDir) {
+    return file_exists($credsDir . '/' . $username . '.conf');
+}

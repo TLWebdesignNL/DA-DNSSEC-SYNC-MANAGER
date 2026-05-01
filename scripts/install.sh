@@ -38,6 +38,11 @@ if [ ! -f "$PLUGIN_PATH/data/excluded.txt" ]; then
     chmod 644 "$PLUGIN_PATH/data/excluded.txt"
 fi
 
+# Create credentials directory (chmod 700 — contains per-reseller API keys)
+mkdir -p "$PLUGIN_PATH/data/credentials"
+chown diradmin:diradmin "$PLUGIN_PATH/data/credentials"
+chmod 700 "$PLUGIN_PATH/data/credentials"
+
 # Seed TLD exception list with the defaults previously hardcoded in the sync script
 if [ ! -f "$PLUGIN_PATH/data/tld_exceptions.txt" ]; then
     printf 'com\ncare\n' > "$PLUGIN_PATH/data/tld_exceptions.txt"

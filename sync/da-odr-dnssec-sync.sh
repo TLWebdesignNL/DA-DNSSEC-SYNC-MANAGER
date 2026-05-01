@@ -278,9 +278,16 @@ LOGIN_URL="https://api.opendomainregistry.net/user/login"
 DOMAININFO_URL="https://api.opendomainregistry.net/domain/$DOMAIN/info"
 CHANGEDNSSEC_URL="https://api.opendomainregistry.net/domain/$DOMAIN/dnssec"
 
-# Replace with your actual API key and secret
-API_KEY=$(get_value_from_credentials "$RESELLER" "public")
-API_SECRET=$(get_value_from_credentials "$RESELLER" "private")
+# Check for per-reseller credentials file (set via plugin UI); fall back to config array
+PLUGIN_CREDS_FILE="/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/credentials/${RESELLER}.conf"
+if [ -f "$PLUGIN_CREDS_FILE" ]; then
+    source "$PLUGIN_CREDS_FILE"
+    API_KEY="$ODR_PUBLIC_KEY"
+    API_SECRET="$ODR_PRIVATE_KEY"
+else
+    API_KEY=$(get_value_from_credentials "$RESELLER" "public")
+    API_SECRET=$(get_value_from_credentials "$RESELLER" "private")
+fi
 
 # Check if API_KEY or API_SECRET is empty and exit if they are stop the script because there is nothing we can do.
 if [ -z "$API_KEY" ] && [ -z "$API_SECRET" ]; then
