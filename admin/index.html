@@ -1,0 +1,113 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$user       = getenv('USERNAME');
+$pluginPath = '/usr/local/directadmin/plugins/da_dnssec_sync_manager';
+$dataFile   = $pluginPath . '/data/excluded.txt';
+
+$flash   = '';
+$flashOk = false;
+$qs = getenv('QUERY_STRING');
+if ($qs !== '') {
+    parse_str(html_entity_decode($qs), $params);
+    $flash   = isset($params['flash']) ? htmlspecialchars(urldecode($params['flash'])) : '';
+    $flashOk = isset($params['ok']) && $params['ok'] === '1';
+}
+?>
+<?php require_once(__DIR__ . '/../exec/base.php'); ?>
+
+<div class="px-3 py-3">
+
+    <h3>DA DNSSEC Sync Manager</h3>
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager">Domain Exceptions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_exceptions.html">TLD Exceptions</a>
+        </li>
+    </ul>
+
+    <p class="text-muted">Domains in this list are skipped entirely by the ODR DNSSEC sync script.</p>
+
+    <?php if ($flash !== ''): ?>
+    <div class="alert <?= $flashOk ? 'alert-success' : 'alert-danger' ?>" role="alert">
+        <?= $flash ?>
+    </div>
+    <?php endif; ?>
+
+    <div class="card mb-4">
+        <div class="card-header">Add domain to exclusion list</div>
+        <div class="card-body">
+            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/save.html" class="row g-2">
+                <div class="col-auto">
+                    <input type="text"
+                           name="domain"
+                           class="form-control"
+                           placeholder="example.com"
+                           required
+                           style="min-width:260px;">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Add Domain</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <h5>Excluded domains</h5>
+
+    <?php
+    if (!file_exists($dataFile)) {
+        echo '<p class="text-muted">No exclusion list found. Add a domain to create it.</p>';
+    } else {
+        $lines   = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $entries = [];
+        foreach ($lines as $line) {
+            $parts = explode('|', $line, 2);
+            if (count($parts) === 2 && $parts[1] !== '') {
+                $entries[] = ['owner' => $parts[0], 'domain' => $parts[1]];
+            }
+        }
+
+        if (empty($entries)) {
+            echo '<p class="text-muted">No domains in the exclusion list.</p>';
+        } else {
+            ?>
+            <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th scope="col">Owner</th>
+                        <th scope="col">Domain</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($entries as $e):
+                    $ownerSafe  = htmlspecialchars($e['owner']);
+                    $domainSafe = htmlspecialchars($e['domain']);
+                ?>
+                    <tr>
+                        <td><?= $ownerSafe ?></td>
+                        <td><?= $domainSafe ?></td>
+                        <td>
+                            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/delete.html" style="margin:0;">
+                                <input type="hidden" name="owner"  value="<?= $ownerSafe ?>">
+                                <input type="hidden" name="domain" value="<?= $domainSafe ?>">
+                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
+            <?php
+        }
+    }
+    ?>
+
+</div>

@@ -1,0 +1,19 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$user       = getenv('USERNAME');
+$_POST      = convertEnvToPost();
+$pluginPath = '/usr/local/directadmin/plugins/da_dnssec_sync_manager';
+$dataFile   = $pluginPath . '/data/excluded.txt';
+$indexUrl   = '/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager';
+
+$check = checkDataDir($pluginPath, $dataFile);
+if (!$check['success']) {
+    $url = flashRedirectUrl($indexUrl, $check);
+} else {
+    $result = saveDomain($_POST['domain'] ?? '', $dataFile, $user);
+    $url    = flashRedirectUrl($indexUrl, $result);
+}
+?>
+<meta http-equiv="refresh" content="0;url=<?= htmlspecialchars($url) ?>">

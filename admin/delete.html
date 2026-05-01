@@ -1,0 +1,15 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$user     = getenv('USERNAME');
+$_POST    = convertEnvToPost();
+$dataFile = '/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/excluded.txt';
+$indexUrl = '/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager';
+
+// Admin may delete entries owned by any user; owner field is passed from the index form
+$owner  = $_POST['owner'] ?? $user;
+$result = deleteDomain($_POST['domain'] ?? '', $dataFile, $owner);
+$url    = flashRedirectUrl($indexUrl, $result);
+?>
+<meta http-equiv="refresh" content="0;url=<?= htmlspecialchars($url) ?>">

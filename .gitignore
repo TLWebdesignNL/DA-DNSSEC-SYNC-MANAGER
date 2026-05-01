@@ -1,0 +1,11 @@
+# User-specific stuff
+.idea
+.DS_Store
+.claude
+
+# Build output
+da_dnssec_sync_manager.tar.gz
+
+# Runtime data (created by install.sh on the server)
+data/excluded.txt
+data/tld_exceptions.txt

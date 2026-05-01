@@ -1,0 +1,14 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$user     = getenv('USERNAME');
+$_POST    = convertEnvToPost();
+$dataFile = '/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/excluded.txt';
+$indexUrl = '/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager';
+
+// Reseller can only delete their own entries; owner is always the logged-in user
+$result = deleteDomain($_POST['domain'] ?? '', $dataFile, $user);
+$url    = flashRedirectUrl($indexUrl, $result);
+?>
+<meta http-equiv="refresh" content="0;url=<?= htmlspecialchars($url) ?>">

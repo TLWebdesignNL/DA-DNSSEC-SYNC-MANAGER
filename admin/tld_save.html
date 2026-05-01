@@ -1,0 +1,23 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$_POST      = convertEnvToPost();
+$pluginPath = '/usr/local/directadmin/plugins/da_dnssec_sync_manager';
+$dataFile   = $pluginPath . '/data/tld_exceptions.txt';
+$indexUrl   = '/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_exceptions.html';
+
+$check = checkDataDir($pluginPath, $dataFile);
+if (!$check['success']) {
+    $url = flashRedirectUrl($indexUrl, $check);
+} else {
+    if (!file_exists($dataFile)) {
+        file_put_contents($dataFile, '');
+        chmod($dataFile, 0644);
+        chown($dataFile, 'diradmin');
+    }
+    $result = saveTld($_POST['tld'] ?? '', $dataFile);
+    $url    = flashRedirectUrl($indexUrl, $result);
+}
+?>
+<meta http-equiv="refresh" content="0;url=<?= htmlspecialchars($url) ?>">
