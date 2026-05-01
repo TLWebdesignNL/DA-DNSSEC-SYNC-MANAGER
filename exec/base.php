@@ -1,4 +1,9 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<style>
+#iframe-container {
+    width: 100%;
+}
+</style>
 <script>
 function resolveTheme() {
     var theme = 'light';
