@@ -12,7 +12,7 @@ $check = checkDataDir($pluginPath, $dataFile);
 if (!$check['success']) {
     $url = flashRedirectUrl($indexUrl, $check);
 } else {
-    $result = saveDomain($_POST['domain'] ?? '', $dataFile, $user);
+    $result = saveDomain($_POST['domain'] ?? '', $dataFile, $user, $_POST['reason'] ?? '', $_POST['expires'] ?? '');
     $url    = flashRedirectUrl($indexUrl, $result);
 }
 ?>

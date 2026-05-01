@@ -151,6 +151,25 @@ write_status() {
     chmod 644 "$SYNC_STATUS_DIR/${domain}.json"
 }
 
+# Function to check if a domain is in the exclusion list and not expired
+# Handles both old format (user|domain) and new format (user|domain|reason|added_at|expires)
+is_domain_excluded() {
+    local domain="$1"
+    local list_file="$2"
+    local now
+    now=$(date +%s)
+    while IFS='|' read -r u d reason added expires rest; do
+        [ "$d" != "$domain" ] && continue
+        if [ -n "$expires" ]; then
+            local exp_epoch
+            exp_epoch=$(date -d "$expires" +%s 2>/dev/null)
+            [ -n "$exp_epoch" ] && [ "$now" -gt "$exp_epoch" ] && continue
+        fi
+        return 0
+    done < "$list_file"
+    return 1
+}
+
 # Function to check if a domain extension is in the exception list
 is_exception_domain() {
     local domain=$1
@@ -203,7 +222,7 @@ fi
 # Uses suffix-match "|domain$" to avoid partial matches (sub.example.com won't match example.com)
 #------------------------------------------------
 EXCEPTION_LIST="/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/excluded.txt"
-if [ -f "$EXCEPTION_LIST" ] && grep -q "|${DOMAIN}$" "$EXCEPTION_LIST"; then
+if [ -f "$EXCEPTION_LIST" ] && is_domain_excluded "$DOMAIN" "$EXCEPTION_LIST"; then
     echo "Domain $DOMAIN is in the DNSSEC sync manager exclusion list. Skipping sync."
     write_status "$DOMAIN" "excluded" "" "" "Domain is in the sync exclusion list"
     exit 0

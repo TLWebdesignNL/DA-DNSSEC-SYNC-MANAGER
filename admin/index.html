@@ -30,6 +30,9 @@ if ($qs !== '') {
             <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/credentials.html">Credentials</a>
         </li>
         <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/sync.html">Sync</a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/status.html">Status</a>
         </li>
         <li class="nav-item">
@@ -48,13 +51,22 @@ if ($qs !== '') {
     <div class="card mb-4">
         <div class="card-header">Add domain to exclusion list</div>
         <div class="card-body">
-            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/save.html" class="d-flex gap-2">
-                <input type="text"
-                       name="domain"
-                       class="form-control"
-                       placeholder="example.com"
-                       required>
-                <button type="submit" class="btn btn-primary text-nowrap">Add Domain</button>
+            <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/save.html">
+                <div class="row g-2 mb-2">
+                    <div class="col-sm">
+                        <input type="text" name="domain" class="form-control" placeholder="example.com" required>
+                    </div>
+                    <div class="col-sm">
+                        <input type="text" name="reason" class="form-control" placeholder="Reason (optional)">
+                    </div>
+                    <div class="col-sm-auto">
+                        <input type="date" name="expires" class="form-control" title="Expires (optional)">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary text-nowrap">Add Domain</button>
+                    </div>
+                </div>
+                <div class="form-text">Expiry date is optional — leave blank to exclude indefinitely.</div>
             </form>
         </div>
     </div>
@@ -62,17 +74,12 @@ if ($qs !== '') {
     <h5>Excluded domains</h5>
 
     <?php
+    $today = date('Y-m-d');
     if (!file_exists($dataFile)) {
         echo '<p class="text-muted">No exclusion list found. Add a domain to create it.</p>';
     } else {
         $lines   = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $entries = [];
-        foreach ($lines as $line) {
-            $parts = explode('|', $line, 2);
-            if (count($parts) === 2 && $parts[1] !== '') {
-                $entries[] = ['owner' => $parts[0], 'domain' => $parts[1]];
-            }
-        }
+        $entries = array_filter(array_map('parseExclusionEntry', $lines), fn($e) => $e['domain'] !== '');
 
         if (empty($entries)) {
             echo '<p class="text-muted">No domains in the exclusion list.</p>';
@@ -84,17 +91,27 @@ if ($qs !== '') {
                     <tr>
                         <th scope="col">Owner</th>
                         <th scope="col">Domain</th>
+                        <th scope="col">Reason</th>
+                        <th scope="col">Added</th>
+                        <th scope="col">Expires</th>
                         <th scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($entries as $e):
+                    $expired    = isExclusionExpired($e);
                     $ownerSafe  = htmlspecialchars($e['owner']);
                     $domainSafe = htmlspecialchars($e['domain']);
+                    $reasonSafe = htmlspecialchars($e['reason']);
+                    $addedSafe  = htmlspecialchars($e['added_at']);
+                    $expiresSafe = htmlspecialchars($e['expires']);
                 ?>
-                    <tr>
+                    <tr class="<?= $expired ? 'text-muted' : '' ?>">
                         <td><?= $ownerSafe ?></td>
-                        <td><?= $domainSafe ?></td>
+                        <td><?= $domainSafe ?> <?= $expired ? '<span class="badge bg-secondary">Expired</span>' : '' ?></td>
+                        <td><?= $reasonSafe ?></td>
+                        <td class="text-nowrap"><?= $addedSafe ?></td>
+                        <td class="text-nowrap"><?= $expiresSafe ?></td>
                         <td>
                             <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/delete.html" style="margin:0;">
                                 <input type="hidden" name="owner"  value="<?= $ownerSafe ?>">

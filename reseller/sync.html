@@ -1,0 +1,84 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+convertEnvToPost();
+
+$user       = getenv('USERNAME');
+$syncScript = '/usr/local/directadmin/scripts/custom/da-odr-dnssec-sync.sh';
+$output     = null;
+$ranDomain  = '';
+
+if (!empty($_POST['domain'])) {
+    $domain    = preg_replace('/[^a-z0-9.\-]/', '', strtolower(trim($_POST['domain'])));
+    $ranDomain = $domain;
+    if ($domain !== '') {
+        $output = shell_exec('bash ' . escapeshellarg($syncScript) . ' ' . escapeshellarg($domain) . ' 2>&1');
+    }
+}
+
+// Build domain list for this reseller's users only
+$domains  = [];
+$userDirs = glob('/usr/local/directadmin/data/users/*/user.conf');
+if ($userDirs) {
+    foreach ($userDirs as $confFile) {
+        $lines   = file($confFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $creator = '';
+        foreach ($lines as $line) {
+            if (strpos($line, 'creator=') === 0) { $creator = substr($line, 8); break; }
+        }
+        if ($creator !== $user) { continue; }
+        $u         = basename(dirname($confFile));
+        $listFile  = dirname($confFile) . '/domains.list';
+        if (!file_exists($listFile)) { continue; }
+        foreach (file($listFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $d) {
+            $d = trim($d);
+            if ($d !== '') { $domains[] = $d; }
+        }
+    }
+}
+sort($domains);
+$domains = array_unique($domains);
+?>
+<?php require_once(__DIR__ . '/../exec/base.php'); ?>
+
+<div class="px-3 py-3 w-100">
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager">Domain Exceptions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager/credentials.html">Credentials</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager/sync.html">Sync</a>
+        </li>
+    </ul>
+
+    <p class="text-muted">Manually trigger the ODR DNSSEC sync for one of your domains.</p>
+
+    <div class="card mb-4">
+        <div class="card-header">Trigger sync</div>
+        <div class="card-body">
+            <?php if (empty($domains)): ?>
+            <p class="text-muted mb-0">No domains found under your account.</p>
+            <?php else: ?>
+            <form method="post" action="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager/sync.html" class="d-flex gap-2">
+                <select name="domain" class="form-select" required>
+                    <option value="">— select domain —</option>
+                    <?php foreach ($domains as $d): ?>
+                    <option value="<?= htmlspecialchars($d) ?>" <?= $d === $ranDomain ? 'selected' : '' ?>><?= htmlspecialchars($d) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="btn btn-primary text-nowrap">Sync now</button>
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php if ($output !== null): ?>
+    <h5>Output for <?= htmlspecialchars($ranDomain) ?></h5>
+    <pre class="border rounded p-3 small" style="max-height:500px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"><?= htmlspecialchars($output) ?></pre>
+    <?php endif; ?>
+
+</div>

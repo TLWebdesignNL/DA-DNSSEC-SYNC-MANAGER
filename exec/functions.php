@@ -43,7 +43,7 @@ function checkDataDir($pluginPath, $dataFile) {
 }
 
 // Returns ['success' => bool, 'message' => string]
-function saveDomain($domainName, $dataFile, $user) {
+function saveDomain($domainName, $dataFile, $user, $reason = '', $expires = '') {
     if (empty($domainName)) {
         return ['success' => false, 'message' => 'Error: No domain submitted.'];
     }
@@ -55,14 +55,25 @@ function saveDomain($domainName, $dataFile, $user) {
         return ['success' => false, 'message' => 'Error: Invalid domain format. Please enter a valid domain (e.g., example.com).'];
     }
 
+    $expires = trim($expires);
+    if ($expires !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $expires)) {
+        return ['success' => false, 'message' => 'Error: Invalid expiry date format. Use YYYY-MM-DD.'];
+    }
+
     $existing = file_exists($dataFile)
         ? file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)
         : [];
-    $entry = $user . '|' . $domain;
 
-    if (in_array($entry, $existing)) {
-        return ['success' => false, 'message' => $domain . ' is already in the exclusion list.'];
+    foreach ($existing as $line) {
+        $parts = explode('|', $line, 3);
+        if ($parts[0] === $user && $parts[1] === $domain) {
+            return ['success' => false, 'message' => $domain . ' is already in the exclusion list.'];
+        }
     }
+
+    $reason   = str_replace(['|', "\n", "\r"], [' ', '', ''], trim($reason));
+    $addedAt  = date('Y-m-d');
+    $entry    = $user . '|' . $domain . '|' . $reason . '|' . $addedAt . '|' . $expires;
 
     file_put_contents($dataFile, $entry . PHP_EOL, FILE_APPEND | LOCK_EX);
     return ['success' => true, 'message' => $domain . ' added to the exclusion list.'];
@@ -77,14 +88,16 @@ function deleteDomain($domainName, $dataFile, $owner) {
 
     $domain = strtolower(trim($domainName));
     $domain = preg_replace('/[^a-z0-9.\-]/', '', $domain);
-    $entry  = $owner . '|' . $domain;
 
     if (!file_exists($dataFile)) {
         return ['success' => false, 'message' => 'Error: Exclusion list not found.'];
     }
 
     $lines    = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $filtered = array_values(array_filter($lines, fn($line) => $line !== $entry));
+    $filtered = array_values(array_filter($lines, function($line) use ($owner, $domain) {
+        $parts = explode('|', $line, 3);
+        return !($parts[0] === $owner && $parts[1] === $domain);
+    }));
 
     if (count($filtered) === count($lines)) {
         return ['success' => false, 'message' => $domain . ' was not found in the exclusion list.'];
@@ -93,6 +106,27 @@ function deleteDomain($domainName, $dataFile, $owner) {
     $content = empty($filtered) ? '' : implode(PHP_EOL, $filtered) . PHP_EOL;
     file_put_contents($dataFile, $content, LOCK_EX);
     return ['success' => true, 'message' => $domain . ' removed from the exclusion list.'];
+}
+
+// Parses a single excluded.txt line into an associative array
+// Handles both old format (user|domain) and new format (user|domain|reason|added_at|expires)
+function parseExclusionEntry($line) {
+    $parts = explode('|', $line, 5);
+    return [
+        'owner'    => $parts[0] ?? '',
+        'domain'   => $parts[1] ?? '',
+        'reason'   => $parts[2] ?? '',
+        'added_at' => $parts[3] ?? '',
+        'expires'  => $parts[4] ?? '',
+    ];
+}
+
+// Returns true if the entry is expired (has a non-empty expires date in the past)
+function isExclusionExpired($entry) {
+    if (empty($entry['expires'])) {
+        return false;
+    }
+    return strtotime($entry['expires']) < strtotime(date('Y-m-d'));
 }
 
 // Returns ['success' => bool, 'message' => string]
