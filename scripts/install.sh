@@ -38,6 +38,11 @@ if [ ! -f "$PLUGIN_PATH/data/excluded.txt" ]; then
     chmod 644 "$PLUGIN_PATH/data/excluded.txt"
 fi
 
+# Create sync status directory (written by the sync script after each run)
+mkdir -p "$PLUGIN_PATH/data/sync"
+chown diradmin:diradmin "$PLUGIN_PATH/data/sync"
+chmod 755 "$PLUGIN_PATH/data/sync"
+
 # Create credentials directory (chmod 700 — contains per-reseller API keys)
 mkdir -p "$PLUGIN_PATH/data/credentials"
 chown diradmin:diradmin "$PLUGIN_PATH/data/credentials"

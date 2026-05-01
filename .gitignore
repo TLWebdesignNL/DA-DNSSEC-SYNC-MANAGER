@@ -6,3 +6,5 @@
 # Runtime data (created by install.sh on the server)
 data/excluded.txt
 data/tld_exceptions.txt
+data/sync/
+data/credentials/

@@ -1,0 +1,70 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$logFile = '/var/log/da-odr-dnssec-sync.log';
+$lines   = [];
+
+if (file_exists($logFile) && is_readable($logFile)) {
+    $all   = file($logFile, FILE_IGNORE_NEW_LINES);
+    $lines = array_slice($all, -200);
+}
+?>
+<?php require_once(__DIR__ . '/../exec/base.php'); ?>
+
+<div class="px-3 py-3 w-100">
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager">Domain Exceptions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_exceptions.html">TLD Exceptions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/credentials.html">Credentials</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/status.html">Status</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/logs.html">Logs</a>
+        </li>
+    </ul>
+
+    <p class="text-muted">Last 200 lines of <code>/var/log/da-odr-dnssec-sync.log</code>. Admin-only — contains API tokens.</p>
+
+    <?php if (empty($lines)): ?>
+    <p class="text-muted">Log file is empty or not readable.</p>
+    <?php else: ?>
+
+    <div class="mb-3">
+        <input type="search"
+               id="logFilter"
+               class="form-control form-control-sm"
+               placeholder="Filter by domain or keyword…">
+    </div>
+
+    <pre id="logOutput" class="border rounded p-3 small" style="max-height:600px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"><?php
+    foreach ($lines as $line) {
+        echo htmlspecialchars($line) . "\n";
+    }
+    ?></pre>
+
+    <script>
+    document.getElementById('logFilter').addEventListener('input', function () {
+        var q     = this.value.toLowerCase();
+        var pre   = document.getElementById('logOutput');
+        var raw   = pre.getAttribute('data-raw') || pre.textContent;
+        pre.setAttribute('data-raw', raw);
+        if (!q) { pre.textContent = raw; return; }
+        var filtered = raw.split('\n').filter(function(l) {
+            return l.toLowerCase().indexOf(q) !== -1;
+        }).join('\n');
+        pre.textContent = filtered || '(no matching lines)';
+    });
+    </script>
+
+    <?php endif; ?>
+
+</div>

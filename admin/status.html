@@ -1,0 +1,92 @@
+#!/usr/local/bin/php
+<?php
+require_once(__DIR__ . '/../exec/functions.php');
+
+$syncDir = '/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/sync';
+$entries = [];
+
+if (is_dir($syncDir)) {
+    foreach (glob($syncDir . '/*.json') as $file) {
+        $json = @json_decode(file_get_contents($file), true);
+        if (is_array($json)) {
+            $entries[] = $json;
+        }
+    }
+}
+
+// Sort: errors first, then excluded, then ok; within each group alphabetically by domain
+usort($entries, function($a, $b) {
+    $order = ['error' => 0, 'excluded' => 1, 'ok' => 2];
+    $sa = $order[$a['status']] ?? 9;
+    $sb = $order[$b['status']] ?? 9;
+    return $sa !== $sb ? $sa - $sb : strcmp($a['domain'], $b['domain']);
+});
+?>
+<?php require_once(__DIR__ . '/../exec/base.php'); ?>
+
+<div class="px-3 py-3 w-100">
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager">Domain Exceptions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_exceptions.html">TLD Exceptions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/credentials.html">Credentials</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/status.html">Status</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/logs.html">Logs</a>
+        </li>
+    </ul>
+
+    <p class="text-muted">Last known sync result per domain. Updated by the sync script after each run.</p>
+
+    <?php if (empty($entries)): ?>
+    <p class="text-muted">No sync status data yet. Status files are created after the first sync run per domain.</p>
+    <?php else: ?>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th scope="col">Domain</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Reseller</th>
+                <th scope="col">Last sync</th>
+                <th scope="col">Status</th>
+                <th scope="col">Message</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($entries as $e):
+            $domain   = htmlspecialchars($e['domain']   ?? '');
+            $owner    = htmlspecialchars($e['owner']    ?? '');
+            $reseller = htmlspecialchars($e['reseller'] ?? '');
+            $lastSync = htmlspecialchars($e['last_sync'] ?? '');
+            $message  = htmlspecialchars($e['message']  ?? '');
+            $status   = $e['status'] ?? '';
+            switch ($status) {
+                case 'ok':       $badge = '<span class="badge bg-success">OK</span>';       break;
+                case 'excluded': $badge = '<span class="badge bg-warning text-dark">Excluded</span>'; break;
+                default:         $badge = '<span class="badge bg-danger">Error</span>';     break;
+            }
+        ?>
+            <tr>
+                <td><?= $domain ?></td>
+                <td><?= $owner ?></td>
+                <td><?= $reseller ?></td>
+                <td class="text-nowrap"><?= $lastSync ?></td>
+                <td><?= $badge ?></td>
+                <td class="text-muted small"><?= $message ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    </div>
+    <?php endif; ?>
+
+</div>

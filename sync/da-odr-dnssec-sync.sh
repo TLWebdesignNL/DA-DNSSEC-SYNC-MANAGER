@@ -138,6 +138,31 @@ send_notification() {
   echo "Notification sent to $user"
 }
 
+# Function to write a JSON status file for a domain
+SYNC_STATUS_DIR="/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/sync"
+write_status() {
+    local domain="$1"
+    local status="$2"
+    local owner="${3:-}"
+    local reseller="${4:-}"
+    local message="$5"
+    [ -z "$domain" ] && return
+    mkdir -p "$SYNC_STATUS_DIR"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    jq -n \
+        --arg domain    "$domain" \
+        --arg last_sync "$timestamp" \
+        --arg status    "$status" \
+        --arg owner     "$owner" \
+        --arg reseller  "$reseller" \
+        --arg message   "$message" \
+        '{domain:$domain,last_sync:$last_sync,status:$status,owner:$owner,reseller:$reseller,message:$message}' \
+        > "$SYNC_STATUS_DIR/${domain}.json"
+    chown diradmin:diradmin "$SYNC_STATUS_DIR/${domain}.json" 2>/dev/null
+    chmod 644 "$SYNC_STATUS_DIR/${domain}.json"
+}
+
 # Function to check if a domain extension is in the exception list
 is_exception_domain() {
     local domain=$1
@@ -192,6 +217,7 @@ fi
 EXCEPTION_LIST="/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/excluded.txt"
 if [ -f "$EXCEPTION_LIST" ] && grep -q "|${DOMAIN}$" "$EXCEPTION_LIST"; then
     echo "Domain $DOMAIN is in the DNSSEC sync manager exclusion list. Skipping sync."
+    write_status "$DOMAIN" "excluded" "" "" "Domain is in the sync exclusion list"
     exit 0
 fi
 
@@ -219,6 +245,7 @@ then
 else
   echo "DA ZSK FILE DOES NOT EXIST. THIS DOMAIN DOES NOT HAVE DNSSEC ENABLED"
   send_notification "$ADMINUSERNAME" "$DOMAIN DOES NOT HAVE DNSSEC ENABLED" "ZSK FILE NOT FOUND. $DOMAIN DOES NOT HAVE DNSSEC ENABLED"
+  write_status "$DOMAIN" "error" "" "" "DNSSEC not enabled: ZSK key file not found"
   exit 0;
 fi
 
@@ -242,6 +269,7 @@ then
 else
   echo "DA KSK FILE DOES NOT EXIST. THIS DOMAIN DOES NOT HAVE DNSSEC ENABLED"
   send_notification "$ADMINUSERNAME" "$DOMAIN DOES NOT HAVE DNSSEC ENABLED" "KSK FILE NOT FOUND. $DOMAIN DOES NOT HAVE DNSSEC ENABLED"
+  write_status "$DOMAIN" "error" "" "" "DNSSEC not enabled: KSK key file not found"
   exit 0;
 fi
 
@@ -254,6 +282,7 @@ OWNER=$(find_domain_owner "$DOMAIN")
 if [ -z "$OWNER" ]; then
     echo "Domain owner not found for domain: $DOMAIN"
     send_notification "$ADMINUSERNAME" "Domain owner not found for domain: $DOMAIN" "Domain owner not found for domain: $DOMAIN"
+    write_status "$DOMAIN" "error" "" "" "Domain owner not found in DirectAdmin"
     exit 0;
 fi
 
@@ -264,6 +293,7 @@ RESELLER=$(find_reseller "$OWNER")
 if [ -z "$RESELLER" ]; then
     echo "Reseller not found for user: $OWNER"
     send_notification "$ADMINUSERNAME" "Reseller not found for user: $OWNER" "Reseller not found for user: $OWNER"
+    write_status "$DOMAIN" "error" "$OWNER" "" "Reseller not found for owner $OWNER"
     exit 0;
 fi
 
@@ -293,14 +323,17 @@ fi
 if [ -z "$API_KEY" ] && [ -z "$API_SECRET" ]; then
     echo "Both API_KEY and API_SECRET are empty. Exiting."
     send_notification "$ADMINUSERNAME" "Both API_KEY and API_SECRET are empty for domain: $DOMAIN with reseller $RESELLER. Exiting." "Both API_KEY and API_SECRET are empty for $RESELLER. Exiting."
+    write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "ODR credentials not configured for reseller $RESELLER"
     exit 0;
 elif [ -z "$API_KEY" ]; then
     echo "API_KEY is empty. Exiting."
     send_notification "$ADMINUSERNAME" "API_KEY is empty for domain: $DOMAIN with reseller $RESELLER. Exiting." "API_KEY is empty for $RESELLER. Exiting."
+    write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "ODR public key not configured for reseller $RESELLER"
     exit 0;
 elif [ -z "$API_SECRET" ]; then
     echo "API_SECRET is empty. Exiting."
     send_notification "$ADMINUSERNAME" "API_SECRET is empty for domain: $DOMAIN with reseller $RESELLER. Exiting." "API_SECRET is empty for $RESELLER. Exiting."
+    write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "ODR private key not configured for reseller $RESELLER"
     exit 0;
 fi
 
@@ -370,6 +403,7 @@ if [ "$DOMAININFO_STATUS" != "success" ]; then
     encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
     send_notification "$ADMINUSERNAME" "Domain $DOMAIN not found in ODR ($DOMAININFO_CODE)" "$encoded_message"
     send_notification "$RESELLER" "Domain $DOMAIN not found in ODR ($DOMAININFO_CODE)" "$encoded_message"
+    write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "Domain not found in ODR ($DOMAININFO_CODE): $DOMAININFO_MESSAGE"
     exit 0;
 fi
 
@@ -468,6 +502,7 @@ EOF
                 # Notify admin and reseller
                 encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
                 send_notification "$RESELLER" "DNSSEC Update Completed for exception domain $DOMAIN" "$encoded_message"
+                write_status "$DOMAIN" "ok" "$OWNER" "$RESELLER" "DNSSEC update completed (TLD exception — pubkey check skipped)"
             else
                 # Check if the pubkeys match
                 if [ "$ODR_ZSK_PUBKEY_RESPONSE" == "$ODR_ZSK_PUBKEY" ] && [ "$ODR_KSK_PUBKEY_RESPONSE" == "$ODR_KSK_PUBKEY" ]; then
@@ -476,6 +511,7 @@ EOF
                     # Notify reseller
                     encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
                     send_notification "$RESELLER" "DNSSEC Update Completed for domain $DOMAIN" "$encoded_message"
+                    write_status "$DOMAIN" "ok" "$OWNER" "$RESELLER" "DNSSEC update completed and verified"
                 else
                     message="DNSSEC update at ODR failed for domain $DOMAIN. Pubkeys do not match."
                     echo $message
@@ -483,6 +519,7 @@ EOF
                     encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
                     send_notification "$ADMINUSERNAME" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
                     send_notification "$RESELLER" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
+                    write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "DNSSEC update at ODR failed: pubkeys do not match"
                 fi
             fi
         else
@@ -492,6 +529,7 @@ EOF
             encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
             send_notification "$ADMINUSERNAME" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
             send_notification "$RESELLER" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
+            write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "DNSSEC update failed or incomplete: $PUT_RESPONSE_STATUS $MESSAGEX"
         fi
     else
         PUT_MESSAGE=$(echo "$PUT_RESPONSE" | jq -r '.response.message // empty')
@@ -501,10 +539,12 @@ EOF
         encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
         send_notification "$ADMINUSERNAME" "DNSSEC update failed for $DOMAIN in ODR ($PUT_CODE)" "$encoded_message"
         send_notification "$RESELLER" "DNSSEC update failed for $DOMAIN in ODR ($PUT_CODE)" "$encoded_message"
+        write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "DNSSEC update failed in ODR ($PUT_CODE): $PUT_MESSAGE"
         exit 0;
     fi
 else
     echo "No update needed. ODR DNSSEC settings are up to date."
+    write_status "$DOMAIN" "ok" "$OWNER" "$RESELLER" "DNSSEC keys are already in sync"
 fi
 
 echo "///////////////////////////////////////////////"
