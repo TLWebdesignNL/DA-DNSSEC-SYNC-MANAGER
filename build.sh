@@ -9,8 +9,7 @@
 #   ├── exec/
 #   ├── hooks/
 #   ├── sync/
-#   │   ├── da-odr-dnssec-sync.sh
-#   │   └── da-odr-dnssec-config.sh.example
+#   │   └── da-odr-dnssec-sync.sh
 #   ├── scripts/
 #   │   ├── install.sh
 #   │   ├── uninstall.sh

@@ -29,14 +29,9 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "//////////////////////////$(date)//////////////////////////"
 echo "START OF THE SCRIPT TO UPDATE ODR DETAILS"
 echo "///////////////////////////////////////////////"
-# load the reseller credentials from external file if it exists (legacy; plugin UI credentials take priority)
-if [ -f /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh ]; then
-    source /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh
-fi
-
-# Resolve admin username from DA config; fall back to value from credentials config or "admin"
-DA_ADMIN=$(grep -m1 "^adminuser=" /usr/local/directadmin/conf/directadmin.conf 2>/dev/null | cut -d= -f2)
-ADMINUSERNAME="${DA_ADMIN:-${ADMINUSERNAME:-admin}}"
+# Resolve admin username from DA config
+ADMINUSERNAME=$(grep -m1 "^adminuser=" /usr/local/directadmin/conf/directadmin.conf 2>/dev/null | cut -d= -f2)
+ADMINUSERNAME="${ADMINUSERNAME:-admin}"
 
 #------------------------------------------------
 # BEGIN FUNCTIONS USED IN SCRIPT
@@ -119,19 +114,6 @@ find_reseller() {
     if [ -f "/usr/local/directadmin/data/users/$user/user.conf" ]; then
         grep -m1 "^creator=" "/usr/local/directadmin/data/users/$user/user.conf" | cut -d= -f2
     fi
-}
-
-# Function to get the value from the array
-get_value_from_credentials() {
-    local reseller=$1
-    local type=$2
-    for entry in "${ODR_CREDENTIALS[@]}"; do
-        IFS=',' read -r entry_reseller entry_type entry_value <<< "$entry"
-        if [[ "$entry_reseller" == "$reseller" && "$entry_type" == "$type" ]]; then
-            echo "$entry_value"
-            return
-        fi
-    done
 }
 
 # Function to send a notification to a DirectAdmin user
@@ -314,15 +296,12 @@ LOGIN_URL="https://api.opendomainregistry.net/user/login"
 DOMAININFO_URL="https://api.opendomainregistry.net/domain/$DOMAIN/info"
 CHANGEDNSSEC_URL="https://api.opendomainregistry.net/domain/$DOMAIN/dnssec"
 
-# Check for per-reseller credentials file (set via plugin UI); fall back to config array
+# Load per-reseller credentials from plugin UI
 PLUGIN_CREDS_FILE="/usr/local/directadmin/plugins/da_dnssec_sync_manager/data/credentials/${RESELLER}.conf"
 if [ -f "$PLUGIN_CREDS_FILE" ]; then
     source "$PLUGIN_CREDS_FILE"
     API_KEY="$ODR_PUBLIC_KEY"
     API_SECRET="$ODR_PRIVATE_KEY"
-else
-    API_KEY=$(get_value_from_credentials "$RESELLER" "public")
-    API_SECRET=$(get_value_from_credentials "$RESELLER" "private")
 fi
 
 # Check if API_KEY or API_SECRET is empty and exit if they are stop the script because there is nothing we can do.
