@@ -34,8 +34,9 @@ if [ -f /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh ]; then
     source /usr/local/directadmin/scripts/custom/da-odr-dnssec-config.sh
 fi
 
-# Fallback: if config file is absent or did not define ADMINUSERNAME, default to "admin"
-ADMINUSERNAME="${ADMINUSERNAME:-admin}"
+# Resolve admin username from DA config; fall back to value from credentials config or "admin"
+DA_ADMIN=$(grep -m1 "^adminuser=" /usr/local/directadmin/conf/directadmin.conf 2>/dev/null | cut -d= -f2)
+ADMINUSERNAME="${DA_ADMIN:-${ADMINUSERNAME:-admin}}"
 
 #------------------------------------------------
 # BEGIN FUNCTIONS USED IN SCRIPT
