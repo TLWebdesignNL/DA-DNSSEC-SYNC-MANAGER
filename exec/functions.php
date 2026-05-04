@@ -188,16 +188,35 @@ function flashRedirectUrl($baseUrl, $result) {
 }
 
 // Returns ['success' => bool, 'message' => string]
-function saveCredentials($publicKey, $privateKey, $username, $credsDir) {
-    $publicKey  = trim($publicKey);
-    $privateKey = trim($privateKey);
-
-    if (empty($publicKey) || empty($privateKey)) {
-        return ['success' => false, 'message' => 'Error: Both public and private key are required.'];
+// $registrar: 'odr' or 'oxxa'
+// $fields: array of POST field name => value (registrar-specific)
+function saveCredentials($registrar, $fields, $username, $credsDir) {
+    $registrar = strtolower(trim($registrar));
+    $allowed   = ['odr', 'oxxa'];
+    if (!in_array($registrar, $allowed)) {
+        return ['success' => false, 'message' => 'Error: Unknown registrar.'];
     }
 
-    if (!preg_match('/^[A-Za-z0-9\$\._\-]+$/', $publicKey) || !preg_match('/^[A-Za-z0-9\$\._\-]+$/', $privateKey)) {
-        return ['success' => false, 'message' => 'Error: Keys may only contain letters, digits, $, ., _ and -.'];
+    $escaped = function($v) { return str_replace("'", "'\\''", $v); };
+    $confFields = [];
+
+    if ($registrar === 'odr') {
+        $publicKey  = trim($fields['public_key']  ?? '');
+        $privateKey = trim($fields['private_key'] ?? '');
+        if (empty($publicKey) || empty($privateKey)) {
+            return ['success' => false, 'message' => 'Error: Both ODR public and private key are required.'];
+        }
+        if (!preg_match('/^[A-Za-z0-9\$\._\-]+$/', $publicKey) || !preg_match('/^[A-Za-z0-9\$\._\-]+$/', $privateKey)) {
+            return ['success' => false, 'message' => 'Error: ODR keys may only contain letters, digits, $, ., _ and -.'];
+        }
+        $confFields = ['ODR_PUBLIC_KEY' => $publicKey, 'ODR_PRIVATE_KEY' => $privateKey];
+    } elseif ($registrar === 'oxxa') {
+        $oxxaUser = trim($fields['oxxa_user'] ?? '');
+        $oxxaPass = trim($fields['oxxa_pass'] ?? '');
+        if (empty($oxxaUser) || empty($oxxaPass)) {
+            return ['success' => false, 'message' => 'Error: Both OXXA username and password are required.'];
+        }
+        $confFields = ['OXXA_USER' => $oxxaUser, 'OXXA_PASS' => $oxxaPass];
     }
 
     if (!is_dir($credsDir)) {
@@ -206,9 +225,10 @@ function saveCredentials($publicKey, $privateKey, $username, $credsDir) {
     }
 
     $file    = $credsDir . '/' . $username . '.conf';
-    $escaped = function($v) { return str_replace("'", "'\\''", $v); };
-    $content = "ODR_PUBLIC_KEY='" . $escaped($publicKey) . "'\n"
-             . "ODR_PRIVATE_KEY='" . $escaped($privateKey) . "'\n";
+    $content = "REGISTRAR='" . $escaped($registrar) . "'\n";
+    foreach ($confFields as $key => $value) {
+        $content .= $key . "='" . $escaped($value) . "'\n";
+    }
 
     if (file_put_contents($file, $content, LOCK_EX) === false) {
         return ['success' => false, 'message' => 'Error: Could not write credentials file.'];
@@ -217,6 +237,19 @@ function saveCredentials($publicKey, $privateKey, $username, $credsDir) {
     chmod($file, 0600);
     chown($file, 'diradmin');
     return ['success' => true, 'message' => 'Credentials saved successfully.'];
+}
+
+// Returns key => value pairs from a bash single-quoted credentials conf file
+function readCredentials($username, $credsDir) {
+    $file = $credsDir . '/' . $username . '.conf';
+    if (!file_exists($file)) return [];
+    $result = [];
+    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        if (preg_match("/^(\w+)='(.*)'$/", $line, $m)) {
+            $result[$m[1]] = $m[2];
+        }
+    }
+    return $result;
 }
 
 // Returns ['success' => bool, 'message' => string]
