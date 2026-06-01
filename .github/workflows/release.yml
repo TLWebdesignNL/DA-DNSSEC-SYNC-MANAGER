@@ -30,9 +30,11 @@ jobs:
 
       # DirectAdmin's plugin downloader doesn't follow redirects, so the
       # GitHub Release asset URL (which is a 302) can't be used as update_url.
-      # We mirror the latest tarball at raw.githubusercontent.com/.../main/
-      # by committing it back to main after every tagged release.
-      - name: Commit freshly-built tarball back to main
+      # The tarball is gitignored locally — this workflow is the only place
+      # the file is committed to main, so the raw.githubusercontent.com mirror
+      # always serves whatever the latest tag built. -f is required because
+      # the file is in .gitignore.
+      - name: Publish freshly-built tarball to main
         run: |
           set -e
           cp da_dnssec_sync_manager.tar.gz /tmp/built.tar.gz
@@ -41,10 +43,10 @@ jobs:
           git fetch origin main
           git checkout main
           cp /tmp/built.tar.gz da_dnssec_sync_manager.tar.gz
-          git add da_dnssec_sync_manager.tar.gz
+          git add -f da_dnssec_sync_manager.tar.gz
           if git diff --staged --quiet; then
             echo "Tarball on main already matches the build — no commit needed."
             exit 0
           fi
-          git commit -m "auto: refresh bundled tarball for ${GITHUB_REF_NAME}"
+          git commit -m "auto: publish bundled tarball for ${GITHUB_REF_NAME}"
           git push origin main
