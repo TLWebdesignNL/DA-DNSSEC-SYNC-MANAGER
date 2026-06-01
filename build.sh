@@ -19,8 +19,13 @@
 set -e
 
 PLUGIN_ID="da_dnssec_sync_manager"
-OUTPUT="${PLUGIN_ID}.tar.gz"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Local builds write to build/ (gitignored). The release workflow copies it
+# from there to the repo root before publishing, so the tracked tarball at
+# the root is only ever written by CI — local rebuilds don't dirty git.
+BUILD_DIR="${BUILD_DIR:-$SCRIPT_DIR/build}"
+OUTPUT="$BUILD_DIR/${PLUGIN_ID}.tar.gz"
+mkdir -p "$BUILD_DIR"
 TMPDIR="$(mktemp -d)"
 
 cleanup() { rm -rf "$TMPDIR"; }
@@ -41,6 +46,6 @@ cp -r \
 find "$TMPDIR" -name '.DS_Store' -delete
 find "$TMPDIR" -name '.gitkeep' -delete
 
-tar -czf "$SCRIPT_DIR/$OUTPUT" -C "$TMPDIR" .
+tar -czf "$OUTPUT" -C "$TMPDIR" .
 
 echo "Built: $OUTPUT"

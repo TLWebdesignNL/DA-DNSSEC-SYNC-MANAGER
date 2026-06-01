@@ -20,30 +20,28 @@ jobs:
           fetch-depth: 0
 
       - name: Build plugin package
-        run: bash build.sh
+        run: bash build.sh   # writes to build/da_dnssec_sync_manager.tar.gz
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: da_dnssec_sync_manager.tar.gz
+          files: build/da_dnssec_sync_manager.tar.gz
           generate_release_notes: true
 
       # DirectAdmin's plugin downloader doesn't follow redirects, so the
       # GitHub Release asset URL (which is a 302) can't be used as update_url.
-      # The tarball is gitignored locally — this workflow is the only place
-      # the file is committed to main, so the raw.githubusercontent.com mirror
-      # always serves whatever the latest tag built. -f is required because
-      # the file is in .gitignore.
+      # CI is the sole writer of the tarball at the repo root — local builds
+      # output to build/ and never touch the tracked file, so there's no diff
+      # churn.
       - name: Publish freshly-built tarball to main
         run: |
           set -e
-          cp da_dnssec_sync_manager.tar.gz /tmp/built.tar.gz
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           git checkout main
-          cp /tmp/built.tar.gz da_dnssec_sync_manager.tar.gz
-          git add -f da_dnssec_sync_manager.tar.gz
+          cp build/da_dnssec_sync_manager.tar.gz da_dnssec_sync_manager.tar.gz
+          git add da_dnssec_sync_manager.tar.gz
           if git diff --staged --quiet; then
             echo "Tarball on main already matches the build — no commit needed."
             exit 0

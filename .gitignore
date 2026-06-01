@@ -9,7 +9,6 @@ data/tld_exceptions.txt
 data/sync/
 data/credentials/
 
-# Build artifact — produced by build.sh locally for testing, but the
-# canonical copy on main is written by the release workflow on each tag.
-# Don't commit local rebuilds.
-da_dnssec_sync_manager.tar.gz
+# Local build output — build.sh writes to build/ so it never touches the
+# tracked tarball at the repo root (that one is CI-managed only).
+build/
