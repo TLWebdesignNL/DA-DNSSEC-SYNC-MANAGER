@@ -7,7 +7,7 @@ $lines   = [];
 
 if (file_exists($logFile) && is_readable($logFile)) {
     $all   = file($logFile, FILE_IGNORE_NEW_LINES);
-    $lines = array_slice($all, -200);
+    $lines = array_slice($all, -2000);
 }
 ?>
 <?php require_once(__DIR__ . '/../exec/base.php'); ?>
@@ -32,7 +32,7 @@ if (file_exists($logFile) && is_readable($logFile)) {
         </li>
     </ul>
 
-    <p class="text-muted">Last 200 lines of <code>/var/log/da-odr-dnssec-sync.log</code>. Admin-only — contains API tokens.</p>
+    <p class="text-muted">Last 2000 lines of <code>/var/log/da-odr-dnssec-sync.log</code>. Admin-only — contains API tokens.</p>
 
     <?php if (empty($lines)): ?>
     <p class="text-muted">Log file is empty or not readable.</p>
