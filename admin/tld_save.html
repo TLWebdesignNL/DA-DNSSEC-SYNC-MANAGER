@@ -16,7 +16,7 @@ if (!$check['success']) {
         chmod($dataFile, 0644);
         chown($dataFile, 'diradmin');
     }
-    $result = saveTld($_POST['tld'] ?? '', $dataFile);
+    $result = saveTld($_POST['registrar'] ?? '', $_POST['tld'] ?? '', $dataFile);
     $url    = flashRedirectUrl($indexUrl, $result);
 }
 ?>

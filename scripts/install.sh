@@ -53,9 +53,10 @@ mkdir -p "$PLUGIN_PATH/data/credentials"
 chown diradmin:diradmin "$PLUGIN_PATH/data/credentials"
 chmod 700 "$PLUGIN_PATH/data/credentials"
 
-# Seed TLD exception list with the defaults previously hardcoded in the sync script
+# Create empty TLD exception list — admin configures it via the UI.
+# Format: one "registrar|tld" entry per line (e.g. "odr|care").
 if [ ! -f "$PLUGIN_PATH/data/tld_exceptions.txt" ]; then
-    printf 'com\ncare\n' > "$PLUGIN_PATH/data/tld_exceptions.txt"
+    touch "$PLUGIN_PATH/data/tld_exceptions.txt"
     chown diradmin:diradmin "$PLUGIN_PATH/data/tld_exceptions.txt"
     chmod 644 "$PLUGIN_PATH/data/tld_exceptions.txt"
 fi

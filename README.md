@@ -37,7 +37,7 @@ Each reseller configures their own registrar and credentials through the plugin 
 The install script will:
 - Set correct ownership and permissions
 - Create the `data/` directory with the required subdirectories
-- Seed the TLD exception list with defaults (`com`, `care`)
+- Create an empty TLD exception list (admin populates it via the UI as needed)
 - Install the sync script at `/usr/local/directadmin/scripts/custom/da-odr-dnssec-sync.sh`
 - Create or update `/usr/local/directadmin/scripts/custom/dnssec_sign_post.sh` to call the sync script
 
@@ -73,7 +73,7 @@ Each entry supports:
 - **Expires** — optional date after which the exclusion is automatically ignored
 
 ### TLD Exceptions
-TLDs listed here skip the pubkey verification step after a successful registrar update. Used for registrars that don't return pubkey data in their update response (e.g., `.com` at ODR).
+Per-registrar list of TLDs to skip entirely — no API call is made. Used when a registrar does not support DNSSEC for a given TLD (e.g. `.care` or `.nu` at ODR). The list is empty by default; admins add entries via the UI.
 
 ### Credentials
 Configure your own registrar credentials (used for domains directly under the admin account). Also shows a table of which resellers have credentials configured and which registrar they use.

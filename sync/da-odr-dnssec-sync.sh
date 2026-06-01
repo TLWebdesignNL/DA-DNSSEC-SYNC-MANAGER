@@ -11,7 +11,7 @@
 #* @author      Tom van der Laan - TLWebdesign.nl
 #* @contact     info@tlwebdesign.nl
 #* @website     https://tlwebdesign.nl
-#* @version     4.0.0
+#* @version     4.1.0
 #* @copyright   GNU General Public License version 3 or later
 #*
 #* @date        2024-07-03
@@ -109,19 +109,19 @@ is_domain_excluded() {
     return 1
 }
 
-is_exception_domain() {
+is_tld_excluded_for_registrar() {
     local domain="$1"
-    local parts
-    IFS='.' read -ra parts <<< "$domain"
-    local extension=""
-    if [ ${#parts[@]} -eq 2 ]; then
-        extension="${parts[1]}"
-    elif [ ${#parts[@]} -eq 3 ]; then
-        extension="${parts[1]}.${parts[2]}"
-    fi
-    for ext in "${EXCEPTION_DOMAINS[@]}"; do
-        [ "$ext" = "$extension" ] && return 0
-    done
+    local registrar="$2"
+    local list_file="$3"
+    [ -f "$list_file" ] || return 1
+    while IFS='|' read -r reg ex_tld _rest; do
+        [ -z "$reg" ] && continue
+        [ -z "$ex_tld" ] && continue
+        [ "$reg" != "$registrar" ] && continue
+        if [[ "$domain" == *.${ex_tld} ]] || [ "$domain" = "$ex_tld" ]; then
+            return 0
+        fi
+    done < "$list_file"
     return 1
 }
 
@@ -219,19 +219,6 @@ fi
 echo "Reseller for $DOMAIN: $RESELLER"
 
 #------------------------------------------------
-# LOAD TLD EXCEPTIONS
-#------------------------------------------------
-EXCEPTION_DOMAINS=()
-TLD_EXCEPTION_FILE="$PLUGIN_PATH/data/tld_exceptions.txt"
-if [ -f "$TLD_EXCEPTION_FILE" ]; then
-    while IFS= read -r tld || [ -n "$tld" ]; do
-        [[ -n "$tld" ]] && EXCEPTION_DOMAINS+=("$tld")
-    done < "$TLD_EXCEPTION_FILE"
-else
-    EXCEPTION_DOMAINS=("com" "care")
-fi
-
-#------------------------------------------------
 # LOAD CREDENTIALS AND DETERMINE REGISTRAR
 #------------------------------------------------
 PLUGIN_CREDS_FILE="$PLUGIN_PATH/data/credentials/${RESELLER}.conf"
@@ -244,6 +231,17 @@ fi
 source "$PLUGIN_CREDS_FILE"
 REGISTRAR="${REGISTRAR:-odr}"
 echo "Registrar for $RESELLER: $REGISTRAR"
+
+#------------------------------------------------
+# PER-REGISTRAR TLD EXCLUSION CHECK
+# Skip sync entirely for TLDs the registrar doesn't support.
+#------------------------------------------------
+TLD_EXCEPTION_FILE="$PLUGIN_PATH/data/tld_exceptions.txt"
+if is_tld_excluded_for_registrar "$DOMAIN" "$REGISTRAR" "$TLD_EXCEPTION_FILE"; then
+    echo "TLD of $DOMAIN is excluded for registrar $REGISTRAR. Skipping sync."
+    write_status "$DOMAIN" "excluded" "$OWNER" "$RESELLER" "TLD not supported for DNSSEC at $REGISTRAR (per TLD exception list)"
+    exit 0
+fi
 
 #------------------------------------------------
 # ROUTE TO REGISTRAR MODULE

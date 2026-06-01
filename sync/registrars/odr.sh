@@ -2,7 +2,7 @@
 # ODR (Open Domain Registry) registrar module
 # Sourced by da-odr-dnssec-sync.sh — do not execute directly
 # Expects: DOMAIN, OWNER, RESELLER, ADMINUSERNAME, DIRECTADMIN_ZSK_*, DIRECTADMIN_KSK_*
-# Uses: write_status(), send_notification(), is_exception_domain(), EXCEPTION_DOMAINS[]
+# Uses: write_status(), send_notification()
 
 generate_sha1() {
     echo -n "$1" | shasum | awk '{print $1}'
@@ -186,27 +186,19 @@ EOF
         if [ "$PUT_RESPONSE_STATUS" = "COMPLETED" ] && [ -n "$TO_APPEND" ]; then
             ODR_ZSK_PUBKEY_RESPONSE=$(echo "$PUT_RESPONSE" | jq -r '.response.data.to_append.dnssec[] | select(.flag == "256") | .pubkey')
             ODR_KSK_PUBKEY_RESPONSE=$(echo "$PUT_RESPONSE" | jq -r '.response.data.to_append.dnssec[] | select(.flag == "257") | .pubkey')
-            if is_exception_domain "$DOMAIN"; then
-                message="DNSSEC update at ODR completed for exception domain $DOMAIN."
+            if [ "$ODR_ZSK_PUBKEY_RESPONSE" = "$DIRECTADMIN_ZSK_PUBKEY" ] && [ "$ODR_KSK_PUBKEY_RESPONSE" = "$DIRECTADMIN_KSK_PUBKEY" ]; then
+                message="DNSSEC update at ODR completed for domain $DOMAIN."
                 echo "$message"
                 encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
-                send_notification "$RESELLER" "DNSSEC Update Completed for exception domain $DOMAIN" "$encoded_message"
-                write_status "$DOMAIN" "ok" "$OWNER" "$RESELLER" "DNSSEC update completed (TLD exception — pubkey check skipped)"
+                send_notification "$RESELLER" "DNSSEC Update Completed for domain $DOMAIN" "$encoded_message"
+                write_status "$DOMAIN" "ok" "$OWNER" "$RESELLER" "DNSSEC update completed and verified"
             else
-                if [ "$ODR_ZSK_PUBKEY_RESPONSE" = "$DIRECTADMIN_ZSK_PUBKEY" ] && [ "$ODR_KSK_PUBKEY_RESPONSE" = "$DIRECTADMIN_KSK_PUBKEY" ]; then
-                    message="DNSSEC update at ODR completed for domain $DOMAIN."
-                    echo "$message"
-                    encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
-                    send_notification "$RESELLER" "DNSSEC Update Completed for domain $DOMAIN" "$encoded_message"
-                    write_status "$DOMAIN" "ok" "$OWNER" "$RESELLER" "DNSSEC update completed and verified"
-                else
-                    message="DNSSEC update at ODR failed for domain $DOMAIN. Pubkeys do not match."
-                    echo "$message"
-                    encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
-                    send_notification "$ADMINUSERNAME" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
-                    send_notification "$RESELLER" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
-                    write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "DNSSEC update at ODR failed: pubkeys do not match"
-                fi
+                message="DNSSEC update at ODR failed for domain $DOMAIN. Pubkeys do not match."
+                echo "$message"
+                encoded_message=$(echo -e "$message" | sed ':a;N;$!ba;s/\n/%0A/g')
+                send_notification "$ADMINUSERNAME" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
+                send_notification "$RESELLER" "DNSSEC Update Failed for domain $DOMAIN" "$encoded_message"
+                write_status "$DOMAIN" "error" "$OWNER" "$RESELLER" "DNSSEC update at ODR failed: pubkeys do not match"
             fi
         else
             message="DNSSEC update at ODR failed or incomplete for domain $DOMAIN. Status: $PUT_RESPONSE_STATUS. Message: $MESSAGEX"

@@ -37,8 +37,9 @@ if ($qs !== '') {
     </ul>
 
     <p class="text-muted">
-        TLDs in this list skip pubkey verification after a successful DNSSEC update at ODR.
-        Use this for registries that do not return pubkey data in their update response.
+        TLDs in this list are skipped entirely for the selected registrar — no API call is made
+        when a domain in one of these TLDs is synced. Use this for registrars that do not
+        support DNSSEC for a given TLD (e.g. <code>.care</code> or <code>.nu</code> at ODR).
     </p>
 
     <?php if ($flash !== ''): ?>
@@ -51,14 +52,19 @@ if ($qs !== '') {
         <div class="card-header">Add TLD exception</div>
         <div class="card-body">
             <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_save.html" class="d-flex gap-2">
+                <select name="registrar" class="form-select" style="max-width:160px;" required>
+                    <?php foreach (supportedRegistrars() as $reg): ?>
+                        <option value="<?= htmlspecialchars($reg) ?>"><?= htmlspecialchars(strtoupper($reg)) ?></option>
+                    <?php endforeach; ?>
+                </select>
                 <input type="text"
                        name="tld"
                        class="form-control"
-                       placeholder="com"
+                       placeholder="care"
                        required>
                 <button type="submit" class="btn btn-primary text-nowrap">Add TLD</button>
             </form>
-            <div class="form-text mt-2">Enter without a leading dot — e.g. <code>com</code>, <code>care</code>, <code>co.uk</code></div>
+            <div class="form-text mt-2">Pick a registrar, then enter the TLD without a leading dot — e.g. <code>care</code>, <code>nu</code>, <code>co.uk</code></div>
         </div>
     </div>
 
@@ -68,9 +74,20 @@ if ($qs !== '') {
     if (!file_exists($dataFile)) {
         echo '<p class="text-muted">No TLD exception list found. Add a TLD to create it.</p>';
     } else {
-        $tlds = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $lines = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        if (empty($tlds)) {
+        $entries = [];
+        $orphans = [];
+        foreach ($lines as $line) {
+            $entry = parseTldException($line);
+            if ($entry) {
+                $entries[] = $entry;
+            } else {
+                $orphans[] = $line;
+            }
+        }
+
+        if (empty($entries) && empty($orphans)) {
             echo '<p class="text-muted">No TLD exceptions configured.</p>';
         } else {
             ?>
@@ -78,18 +95,22 @@ if ($qs !== '') {
             <table class="table table-striped table-hover table-sm">
                 <thead>
                     <tr>
+                        <th scope="col">Registrar</th>
                         <th scope="col">TLD</th>
                         <th scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($tlds as $tld):
-                    $tldSafe = htmlspecialchars($tld);
+                <?php foreach ($entries as $entry):
+                    $regSafe = htmlspecialchars($entry['registrar']);
+                    $tldSafe = htmlspecialchars($entry['tld']);
                 ?>
                     <tr>
+                        <td><span class="badge bg-secondary"><?= strtoupper($regSafe) ?></span></td>
                         <td><code>.<?= $tldSafe ?></code></td>
                         <td>
                             <form method="post" action="/CMD_PLUGINS_ADMIN/da_dnssec_sync_manager/tld_delete.html" style="margin:0;">
+                                <input type="hidden" name="registrar" value="<?= $regSafe ?>">
                                 <input type="hidden" name="tld" value="<?= $tldSafe ?>">
                                 <button type="submit" class="btn btn-danger btn-sm">Remove</button>
                             </form>
@@ -100,6 +121,9 @@ if ($qs !== '') {
             </table>
             </div>
             <?php
+            if (!empty($orphans)) {
+                echo '<div class="alert alert-warning mt-3"><strong>Legacy entries:</strong> the following lines pre-date the per-registrar format and are being ignored by the sync script. Re-add them above with the correct registrar, then edit the file to remove them: <code>' . htmlspecialchars(implode(', ', $orphans)) . '</code></div>';
+            }
         }
     }
     ?>

@@ -129,8 +129,32 @@ function isExclusionExpired($entry) {
     return strtotime($entry['expires']) < strtotime(date('Y-m-d'));
 }
 
+function supportedRegistrars() {
+    return ['odr', 'oxxa'];
+}
+
+// Parses a tld_exceptions.txt line into ['registrar' => ..., 'tld' => ...]
+// Returns null for malformed lines.
+function parseTldException($line) {
+    $parts = explode('|', $line, 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+    $reg = strtolower(trim($parts[0]));
+    $tld = strtolower(trim($parts[1]));
+    if ($reg === '' || $tld === '') {
+        return null;
+    }
+    return ['registrar' => $reg, 'tld' => $tld];
+}
+
 // Returns ['success' => bool, 'message' => string]
-function saveTld($tldName, $dataFile) {
+function saveTld($registrar, $tldName, $dataFile) {
+    $registrar = strtolower(trim($registrar));
+    if (!in_array($registrar, supportedRegistrars(), true)) {
+        return ['success' => false, 'message' => 'Error: Unknown registrar.'];
+    }
+
     if (empty($tldName)) {
         return ['success' => false, 'message' => 'Error: No TLD submitted.'];
     }
@@ -147,21 +171,30 @@ function saveTld($tldName, $dataFile) {
         ? file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)
         : [];
 
-    if (in_array($tld, $existing)) {
-        return ['success' => false, 'message' => '.' . $tld . ' is already in the TLD exception list.'];
+    foreach ($existing as $line) {
+        $entry = parseTldException($line);
+        if ($entry && $entry['registrar'] === $registrar && $entry['tld'] === $tld) {
+            return ['success' => false, 'message' => '.' . $tld . ' is already excluded for ' . strtoupper($registrar) . '.'];
+        }
     }
 
-    file_put_contents($dataFile, $tld . PHP_EOL, FILE_APPEND | LOCK_EX);
-    return ['success' => true, 'message' => '.' . $tld . ' added to the TLD exception list.'];
+    file_put_contents($dataFile, $registrar . '|' . $tld . PHP_EOL, FILE_APPEND | LOCK_EX);
+    return ['success' => true, 'message' => '.' . $tld . ' added to the exception list for ' . strtoupper($registrar) . '.'];
 }
 
 // Returns ['success' => bool, 'message' => string]
-function deleteTld($tldName, $dataFile) {
+function deleteTld($registrar, $tldName, $dataFile) {
+    $registrar = strtolower(trim($registrar));
+    if (!in_array($registrar, supportedRegistrars(), true)) {
+        return ['success' => false, 'message' => 'Error: Unknown registrar.'];
+    }
+
     if (empty($tldName)) {
         return ['success' => false, 'message' => 'Error: No TLD specified.'];
     }
 
     $tld = strtolower(trim($tldName));
+    $tld = ltrim($tld, '.');
     $tld = preg_replace('/[^a-z0-9.]/', '', $tld);
 
     if (!file_exists($dataFile)) {
@@ -169,15 +202,19 @@ function deleteTld($tldName, $dataFile) {
     }
 
     $lines    = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $filtered = array_values(array_filter($lines, fn($line) => $line !== $tld));
+    $filtered = array_values(array_filter($lines, function($line) use ($registrar, $tld) {
+        $entry = parseTldException($line);
+        if (!$entry) return true;
+        return !($entry['registrar'] === $registrar && $entry['tld'] === $tld);
+    }));
 
     if (count($filtered) === count($lines)) {
-        return ['success' => false, 'message' => '.' . $tld . ' was not found in the TLD exception list.'];
+        return ['success' => false, 'message' => '.' . $tld . ' was not found in the exception list for ' . strtoupper($registrar) . '.'];
     }
 
     $content = empty($filtered) ? '' : implode(PHP_EOL, $filtered) . PHP_EOL;
     file_put_contents($dataFile, $content, LOCK_EX);
-    return ['success' => true, 'message' => '.' . $tld . ' removed from the TLD exception list.'];
+    return ['success' => true, 'message' => '.' . $tld . ' removed from the exception list for ' . strtoupper($registrar) . '.'];
 }
 
 // Builds a redirect URL with a flash message encoded in the query string
