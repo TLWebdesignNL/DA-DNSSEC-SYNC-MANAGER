@@ -1,5 +1,10 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<!-- tablesort core does string sort only — load the number + date plugins so
+     numeric columns sort numerically and ISO dates sort chronologically by type,
+     not just because the data happens to be lex-friendly. -->
 <script src="https://cdn.jsdelivr.net/npm/tablesort@latest/dist/tablesort.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/tablesort@latest/dist/sorts/tablesort.number.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/tablesort@latest/dist/sorts/tablesort.date.min.js" crossorigin="anonymous"></script>
 <style>
 #iframe-container {
     width: 100%;
