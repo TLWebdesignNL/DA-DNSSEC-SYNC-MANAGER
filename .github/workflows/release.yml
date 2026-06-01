@@ -16,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Build plugin package
         run: bash build.sh
@@ -25,3 +27,24 @@ jobs:
         with:
           files: da_dnssec_sync_manager.tar.gz
           generate_release_notes: true
+
+      # DirectAdmin's plugin downloader doesn't follow redirects, so the
+      # GitHub Release asset URL (which is a 302) can't be used as update_url.
+      # We mirror the latest tarball at raw.githubusercontent.com/.../main/
+      # by committing it back to main after every tagged release.
+      - name: Commit freshly-built tarball back to main
+        run: |
+          set -e
+          cp da_dnssec_sync_manager.tar.gz /tmp/built.tar.gz
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          cp /tmp/built.tar.gz da_dnssec_sync_manager.tar.gz
+          git add da_dnssec_sync_manager.tar.gz
+          if git diff --staged --quiet; then
+            echo "Tarball on main already matches the build — no commit needed."
+            exit 0
+          fi
+          git commit -m "auto: refresh bundled tarball for ${GITHUB_REF_NAME}"
+          git push origin main

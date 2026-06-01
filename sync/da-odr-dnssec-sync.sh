@@ -11,7 +11,7 @@
 #* @author      Tom van der Laan - TLWebdesign.nl
 #* @contact     info@tlwebdesign.nl
 #* @website     https://tlwebdesign.nl
-#* @version     4.1.1
+#* @version     4.1.2
 #* @copyright   GNU General Public License version 3 or later
 #*
 #* @date        2024-07-03
