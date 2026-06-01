@@ -217,6 +217,15 @@ function deleteTld($registrar, $tldName, $dataFile) {
     return ['success' => true, 'message' => '.' . $tld . ' removed from the exception list for ' . strtoupper($registrar) . '.'];
 }
 
+// Format an ISO-8601 UTC timestamp ("2026-06-01T14:46:30Z") for display.
+// Returns "Jun 1, 2026 14:46 UTC" — keep UTC since the sync script writes UTC.
+function formatSyncTime($iso) {
+    if (empty($iso)) return '';
+    $ts = strtotime($iso);
+    if ($ts === false) return htmlspecialchars($iso);
+    return gmdate('M j, Y H:i', $ts) . ' UTC';
+}
+
 // Builds a redirect URL with a flash message encoded in the query string
 function flashRedirectUrl($baseUrl, $result) {
     $ok    = $result['success'] ? '1' : '0';

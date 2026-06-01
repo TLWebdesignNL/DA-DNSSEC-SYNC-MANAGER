@@ -1,8 +1,24 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/tablesort@latest/dist/tablesort.min.js" crossorigin="anonymous"></script>
 <style>
 #iframe-container {
     width: 100%;
 }
+table.sortable thead th[role="columnheader"]:not(.no-sort) {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 18px;
+}
+table.sortable thead th[role="columnheader"]:not(.no-sort)::after {
+    content: " \2195";
+    opacity: 0.35;
+    font-size: 0.85em;
+    position: absolute;
+    right: 6px;
+}
+table.sortable thead th[aria-sort="ascending"]::after  { content: " \2191"; opacity: 1; }
+table.sortable thead th[aria-sort="descending"]::after { content: " \2193"; opacity: 1; }
 </style>
 <script>
 function resolveTheme() {
@@ -37,5 +53,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }).observe(window.top.document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
         }
     } catch (e) {}
+
+    // Initialise tablesort on every <table class="sortable">.
+    // Per-row sort values can be set via data-sort="..." on <td>; default
+    // sorted column can be marked with class="sort-default" on the <th>.
+    if (typeof Tablesort === 'function') {
+        document.querySelectorAll('table.sortable').forEach(function (t) { new Tablesort(t); });
+    }
 });
 </script>

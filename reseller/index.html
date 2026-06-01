@@ -77,14 +77,14 @@ if ($qs !== '') {
         } else {
             ?>
             <div class="table-responsive">
-            <table class="table table-striped table-hover table-sm">
+            <table class="table table-striped table-hover table-sm sortable">
                 <thead>
                     <tr>
                         <th scope="col">Domain</th>
                         <th scope="col">Reason</th>
                         <th scope="col">Added</th>
                         <th scope="col">Expires</th>
-                        <th scope="col"></th>
+                        <th scope="col" class="no-sort"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -94,12 +94,13 @@ if ($qs !== '') {
                     $reasonSafe  = htmlspecialchars($e['reason']);
                     $addedSafe   = htmlspecialchars($e['added_at']);
                     $expiresSafe = htmlspecialchars($e['expires']);
+                    $expiresSort = $expiresSafe !== '' ? $expiresSafe : '9999-12-31';
                 ?>
                     <tr class="<?= $expired ? 'text-muted' : '' ?>">
                         <td><?= $domainSafe ?> <?= $expired ? '<span class="badge bg-secondary">Expired</span>' : '' ?></td>
                         <td><?= $reasonSafe ?></td>
                         <td class="text-nowrap"><?= $addedSafe ?></td>
-                        <td class="text-nowrap"><?= $expiresSafe ?></td>
+                        <td class="text-nowrap" data-sort="<?= $expiresSort ?>"><?= $expiresSafe ?></td>
                         <td>
                             <form method="post" action="/CMD_PLUGINS_RESELLER/da_dnssec_sync_manager/delete.html" style="margin:0;">
                                 <input type="hidden" name="domain" value="<?= $domainSafe ?>">
