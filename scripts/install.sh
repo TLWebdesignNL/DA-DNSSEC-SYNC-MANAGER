@@ -27,6 +27,13 @@ for dir in admin reseller; do
     fi
 done
 
+# Credentials hold registrar API keys. The blanket chmod above makes them world-readable,
+# so lock them down again: only diradmin (and root) may read them.
+if [ -d "$PLUGIN_PATH/data/credentials" ]; then
+    chmod 700 "$PLUGIN_PATH/data/credentials"
+    find "$PLUGIN_PATH/data/credentials" -type f -exec chmod 600 {} \;
+fi
+
 # Create plugin data directory and runtime files
 mkdir -p "$PLUGIN_PATH/data"
 chown diradmin:diradmin "$PLUGIN_PATH/data"
